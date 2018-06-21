@@ -37,3 +37,6 @@ blackbox
 rllab/config_personal.py
 *.swp
 sandbox
+
+.set_env
+

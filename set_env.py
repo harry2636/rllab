@@ -1,3 +1,3 @@
 source activate rllab3
-export PYTHONPATH=/Users/harrykim/Documents/rllab
+export PYTHONPATH=/home/harrykim/rllab
 
