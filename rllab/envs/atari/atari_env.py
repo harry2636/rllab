@@ -8,47 +8,18 @@ import logging
 import os
 import os.path as osp
 from rllab.envs.base import Env, Step
+from rllab.envs.gym_env import *
 from rllab.core.serializable import Serializable
 from rllab.spaces.box import Box
 from rllab.spaces.discrete import Discrete
 from rllab.spaces.product import Product
 from rllab.misc import logger
 
-def convert_gym_space(space):
-    if isinstance(space, gym.spaces.Box):
-        return Box(low=space.low, high=space.high)
-    elif isinstance(space, gym.spaces.Discrete):
-        return Discrete(n=space.n)
-    elif isinstance(space, gym.spaces.Tuple):
-        return Product([convert_gym_space(x) for x in space.spaces])
-    else:
-        raise NotImplementedError
+from rllab.envs.atari.atari_wrappers import wrap_deepmind, make_atari
 
 
-class CappedCubicVideoSchedule(object):
-    # Copied from gym, since this method is frequently moved around
-    def __call__(self, count):
-        if count < 1000:
-            return int(round(count ** (1. / 3))) ** 3 == count
-        else:
-            return count % 1000 == 0
-
-
-class FixedIntervalVideoSchedule(object):
-    def __init__(self, interval):
-        self.interval = interval
-
-    def __call__(self, count):
-        return count % self.interval == 0
-
-
-class NoVideoSchedule(object):
-    def __call__(self, count):
-        return False
-
-
-class GymEnv(Env, Serializable):
-    def __init__(self, env_name, record_video=True, video_schedule=None, log_dir=None, record_log=True,
+class AtariEnv(Env, Serializable):
+    def __init__(self, env_name, resize_size=52, scaling_method='minmax', record_video=True, video_schedule=None, log_dir=None, record_log=True,
                  force_reset=False):
         if log_dir is None:
             if logger.get_snapshot_dir() is None:
@@ -57,7 +28,11 @@ class GymEnv(Env, Serializable):
                 log_dir = os.path.join(logger.get_snapshot_dir(), "gym_log")
         Serializable.quick_init(self, locals())
 
-        env = gym.envs.make(env_name)
+        env = make_atari(env_name)
+
+        env = wrap_deepmind(env, resize_size)
+        logger.log("resize size: %d" % resize_size)
+
         self.env = env
         self.env_id = env.spec.id
 
@@ -107,8 +82,8 @@ class GymEnv(Env, Serializable):
         next_obs, reward, done, info = self.env.step(action)
         return Step(next_obs, reward, done, **info)
 
-    def render(self):
-        self.env.render()
+    def render(self, mode='human'):
+        return self.env.render(mode)
 
     def terminate(self):
         if self.monitoring:
@@ -116,11 +91,7 @@ class GymEnv(Env, Serializable):
             if self._log_dir is not None:
                 print("""
     ***************************
-
     Training finished! You can upload results to OpenAI Gym by running the following command:
-
     python scripts/submit_gym.py %s
-
     ***************************
                 """ % self._log_dir)
-
