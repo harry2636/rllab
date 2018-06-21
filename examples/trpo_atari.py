@@ -23,6 +23,7 @@ FLAGS.discount = 0.99
 
 parser = atari_arg_parser()
 parser.add_argument('--n_itr', type=int, default=int(500))
+parser.add_argument('--log_dir', help='log directory', default=None)
 args = parser.parse_args()
 
 
@@ -79,5 +80,6 @@ if __name__ == '__main__':
         # Specifies the seed for the experiment. If this is not provided, a random seed
         # will be used
         seed=args.seed,
+        log_dir=args.log_dir,
         # plot=True,
     )
