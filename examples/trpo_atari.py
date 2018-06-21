@@ -8,6 +8,7 @@ from sandbox.rocky.tf.core.network import ConvNetwork
 from sandbox.rocky.tf.envs.base import TfEnv
 from sandbox.rocky.tf.policies.categorical_mlp_policy import CategoricalMLPPolicy
 from rllab.misc.instrument import run_experiment_lite
+from rllab.misc.parser import atari_arg_parser
 
 import tensorflow as tf
 '''
@@ -20,9 +21,15 @@ FLAGS.step_size = 0.01
 FLAGS.discount = 0.99
 '''
 
+parser = atari_arg_parser()
+parser.add_argument('--n_itr', type=int, default=int(500))
+args = parser.parse_args()
+
+
 def main(_):
+
   env = TfEnv(AtariEnv(
-      "PongNoFrameskip-v0", force_reset=True, record_video=False, record_log=False, resize_size=84))
+      args.env, force_reset=True, record_video=False, record_log=False, resize_size=84))
 
   policy = CategoricalMLPPolicy(
       name='policy',
@@ -51,7 +58,7 @@ def main(_):
       baseline=baseline,
       batch_size=100000,
       max_path_length=4500,
-      n_itr=500,
+      n_itr=args.n_itr,
       discount=0.99,
       step_size=0.01,
       optimizer_args={"subsample_factor":0.1}
@@ -71,6 +78,6 @@ if __name__ == '__main__':
         snapshot_mode="last",
         # Specifies the seed for the experiment. If this is not provided, a random seed
         # will be used
-        seed=1,
+        seed=args.seed,
         # plot=True,
     )
