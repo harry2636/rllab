@@ -30,7 +30,7 @@ class AtariEnv(Env, Serializable):
 
         env = make_atari(env_name)
 
-        env = wrap_deepmind(env, resize_size)
+        env = wrap_deepmind(env=env, resize=resize_size)
         logger.log("resize size: %d" % resize_size)
 
         self.env = env

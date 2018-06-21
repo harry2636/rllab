@@ -22,7 +22,7 @@ FLAGS.discount = 0.99
 
 def main(_):
   env = TfEnv(AtariEnv(
-      "PongNoFrameskip-v0", force_reset=True, record_video=False, record_log=False))
+      "PongNoFrameskip-v0", force_reset=True, record_video=False, record_log=False, resize_size=84))
 
   policy = CategoricalMLPPolicy(
       name='policy',
