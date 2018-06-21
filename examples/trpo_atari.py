@@ -24,6 +24,8 @@ FLAGS.discount = 0.99
 parser = atari_arg_parser()
 parser.add_argument('--n_itr', type=int, default=int(500))
 parser.add_argument('--log_dir', help='log directory', default=None)
+parser.add_argument('--n_cpu', type=int, default=int(1))
+parser.add_argument('--n_parallel', type=int, default=int(16))
 args = parser.parse_args()
 
 
@@ -65,16 +67,20 @@ def main(_):
       optimizer_args={"subsample_factor":0.1}
 #       plot=True
   )
-  #algo.set_summary_path(FLAGS.summary_path)
-  #algo.set_checkpoint_path(FLAGS.checkpoint_path)
-  algo.train()
 
+  config = tf.ConfigProto(allow_soft_placement=True,
+                          intra_op_parallelism_threads=args.n_cpu,
+                          inter_op_parallelism_threads=args.n_cpu)
+  config.gpu_options.allow_growth = True  # pylint: disable=E1101
+  sess = tf.Session(config=config)
+  sess.__enter__()
+  algo.train(sess)
 
 if __name__ == '__main__':
     run_experiment_lite(
         main,
         # Number of parallel workers for sampling
-        n_parallel=16,
+        n_parallel=args.n_parallel,
         # Only keep the snapshot parameters for the last iteration
         snapshot_mode="last",
         # Specifies the seed for the experiment. If this is not provided, a random seed
