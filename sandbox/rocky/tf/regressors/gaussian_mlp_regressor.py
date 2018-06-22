@@ -38,7 +38,7 @@ class GaussianMLPRegressor(LayersPowered, Serializable):
             normalize_inputs=True,
             normalize_outputs=True,
             subsample_factor=1.0,
-            batchsize=256,
+            batchsize=1024,
     ):
         """
         :param input_shape: Shape of the input data.
