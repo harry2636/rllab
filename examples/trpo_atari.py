@@ -1,5 +1,4 @@
 from rllab.baselines.zero_baseline import ZeroBaseline
-from rllab.envs.gym_env import GymEnv
 from rllab.envs.atari.atari_env import AtariEnv
 
 from rllab.envs.normalized_env import normalize
@@ -7,20 +6,14 @@ from sandbox.rocky.tf.algos.trpo import TRPO
 from sandbox.rocky.tf.core.network import ConvNetwork
 from sandbox.rocky.tf.envs.base import TfEnv
 from sandbox.rocky.tf.policies.categorical_mlp_policy import CategoricalMLPPolicy
+from sandbox.rocky.tf.baselines.gaussian_mlp_baseline import GaussianMLPBaseline
+
 from rllab.misc.instrument import run_experiment_lite
 from rllab.misc.parser import atari_arg_parser
 from rllab.misc import logger
 
 import tensorflow as tf
-'''
-FLAGS = {}
-FLAGS.env_name = "PongNoFrameskip-v0"
-FLAGS.batch_size = 100000
-FLAGS.max_steps_per_episode = 4500
-FLAGS.num_episodes_train = 10000
-FLAGS.step_size = 0.01
-FLAGS.discount = 0.99
-'''
+import copy
 
 parser = atari_arg_parser()
 parser.add_argument('--n_itr', type=int, default=int(500))
@@ -32,6 +25,7 @@ parser.add_argument('--batch_size', type=int, default=int(100000))
 parser.add_argument('--step_size', type=float, default=float(0.01))
 parser.add_argument('--discount_factor', type=float, default=float(0.995))
 parser.add_argument('--batch_norm', help='Turn on batch normalization', type=bool, default=True)
+parser.add_argument('--value_function', help='Choose value funciton baseline', choices=['zero', 'conv'], default='zero')
 
 args = parser.parse_args()
 logger.log(str(args))
@@ -41,10 +35,7 @@ def main(_):
   env = TfEnv(AtariEnv(
       args.env, force_reset=True, record_video=False, record_log=False, resize_size=args.resize_size))
 
-  policy = CategoricalMLPPolicy(
-      name='policy',
-      env_spec=env.spec,
-      prob_network=ConvNetwork(
+  policy_network = ConvNetwork(
           name='prob_network',
           input_shape=env.observation_space.shape,
           output_dim=env.action_space.n,
@@ -59,9 +50,41 @@ def main(_):
           output_nonlinearity=tf.nn.softmax,
           batch_normalization=args.batch_norm
       )
+  policy = CategoricalMLPPolicy(
+      name='policy',
+      env_spec=env.spec,
+      prob_network=policy_network
   )
 
-  baseline = ZeroBaseline(env.spec)
+  value_network = ConvNetwork(
+          name='value_network',
+          input_shape=env.observation_space.shape,
+          output_dim=1,
+          # number of channels/filters for each conv layer
+          conv_filters=(16, 32),
+          # filter size
+          conv_filter_sizes=(8, 4),
+          conv_strides=(4, 2),
+          conv_pads=('VALID', 'VALID'),
+          hidden_sizes=(256,),
+          hidden_nonlinearity=tf.nn.relu,
+          output_nonlinearity=None,
+          batch_normalization=args.batch_norm
+      )
+
+  if (args.value_function == 'zero'):
+      baseline = ZeroBaseline(env.spec)
+  elif (args.value_function == 'conv'):
+      baseline = GaussianMLPBaseline(
+          env.spec,
+          regressor_args=dict(
+              step_size=0.01,
+              mean_network=value_network
+          )
+      )
+  else:
+      logger.log("Inappropriate value function")
+      exit(0)
 
   algo = TRPO(
       env=env,
@@ -83,6 +106,10 @@ def main(_):
   sess = tf.Session(config=config)
   sess.__enter__()
   algo.train(sess)
+
+main("a")
+
+exit()
 
 if __name__ == '__main__':
     run_experiment_lite(

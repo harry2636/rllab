@@ -38,5 +38,5 @@ rllab/config_personal.py
 *.swp
 sandbox
 
-.set_env
+set_env.py
 
