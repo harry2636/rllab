@@ -25,9 +25,9 @@ parser.add_argument('--resize_size', type=int, default=int(52))
 parser.add_argument('--batch_size', type=int, default=int(100000))
 parser.add_argument('--step_size', type=float, default=float(0.01))
 parser.add_argument('--discount_factor', type=float, default=float(0.995))
-parser.add_argument('--batch_norm', help='Turn on batch normalization', type=bool, default=True)
+parser.add_argument('--batch_norm', help='Turn on batch normalization', type=bool, default=False) #Batch norm currently have bug in implementation.
 parser.add_argument('--value_function', help='Choose value funciton baseline', choices=['zero', 'conv'], default='zero')
-parser.add_argument('--num_slices', help='Slice big batch into smaller ones to prevent OOM', type=int, default=int(2))
+parser.add_argument('--num_slices', help='Slice big batch into smaller ones to prevent OOM', type=int, default=int(8))
 
 args = parser.parse_args()
 logger.log(str(args))
@@ -50,7 +50,7 @@ def main(_):
           hidden_sizes=(256,),
           hidden_nonlinearity=tf.nn.relu,
           output_nonlinearity=tf.nn.softmax,
-          batch_normalization=args.batch_norm
+          batch_normalization=False
       )
   policy = CategoricalMLPPolicy(
       name='policy',
@@ -74,7 +74,7 @@ def main(_):
           hidden_sizes=(256,),
           hidden_nonlinearity=tf.nn.relu,
           output_nonlinearity=None,
-          batch_normalization=args.batch_norm
+          batch_normalization=False
       )
       conjugate_optimizer = ConjugateGradientOptimizer(
           subsample_factor=0.1,
@@ -82,6 +82,7 @@ def main(_):
       )
       baseline = GaussianMLPBaseline(
           env.spec,
+          num_slices=args.num_slices,
           regressor_args=dict(
               step_size=0.01,
               mean_network=value_network,

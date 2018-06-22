@@ -4,7 +4,9 @@ from rllab.core.serializable import Serializable
 from rllab.core.parameterized import Parameterized
 from rllab.baselines.base import Baseline
 from rllab.misc.overrides import overrides
+from rllab.misc.ext import iterate_minibatches_generic
 from sandbox.rocky.tf.regressors.gaussian_mlp_regressor import GaussianMLPRegressor
+
 
 
 class GaussianMLPBaseline(Baseline, Parameterized):
@@ -15,6 +17,7 @@ class GaussianMLPBaseline(Baseline, Parameterized):
             subsample_factor=1.,
             input_shape=None,
             num_seq_inputs=1,
+            num_slices=1,
             regressor_args=None,
     ):
         Serializable.quick_init(self, locals())
@@ -28,6 +31,7 @@ class GaussianMLPBaseline(Baseline, Parameterized):
             name="vf",
             **regressor_args
         )
+        self.num_slices = num_slices
 
     @overrides
     def fit(self, paths):
@@ -37,7 +41,19 @@ class GaussianMLPBaseline(Baseline, Parameterized):
 
     @overrides
     def predict(self, path):
-        return self._regressor.predict(path["observations"]).flatten()
+        obs = path["observations"]
+        batch_size = len(obs) // self.num_slices
+
+        prediction = []
+        for batch in iterate_minibatches_generic(input_lst=[obs], batchsize=batch_size, shuffle=False):
+            part_obs, = batch
+            part_pred = self._regressor.predict(part_obs).flatten()
+            prediction.append(part_pred)
+
+        full_pred = np.concatenate(prediction, axis=0)
+
+        #real_result = self._regressor.predict(path["observations"]).flatten()
+        return full_pred
 
     @overrides
     def get_param_values(self, **tags):
