@@ -9,6 +9,7 @@ from sandbox.rocky.tf.optimizers.penalty_lbfgs_optimizer import PenaltyLbfgsOpti
 from sandbox.rocky.tf.distributions.diagonal_gaussian import DiagonalGaussian
 from rllab.core.serializable import Serializable
 from rllab.misc import logger
+from rllab.misc.ext import iterate_minibatches_generic
 import tensorflow as tf
 
 
@@ -36,7 +37,8 @@ class GaussianMLPRegressor(LayersPowered, Serializable):
             std_nonlinearity=None,
             normalize_inputs=True,
             normalize_outputs=True,
-            subsample_factor=1.0
+            subsample_factor=1.0,
+            batchsize=256,
     ):
         """
         :param input_shape: Shape of the input data.
@@ -176,6 +178,8 @@ class GaussianMLPRegressor(LayersPowered, Serializable):
             self._y_mean_var = y_mean_var
             self._y_std_var = y_std_var
 
+            self._batchsize = batchsize
+
     def fit(self, xs, ys):
         if self._subsample_factor < 1:
             num_samples_tot = xs.shape[0]
@@ -195,19 +199,42 @@ class GaussianMLPRegressor(LayersPowered, Serializable):
                 tf.assign(self._y_mean_var, np.mean(ys, axis=0, keepdims=True)),
                 tf.assign(self._y_std_var, np.std(ys, axis=0, keepdims=True) + 1e-8),
             ])
+
+        if self._name:
+            prefix = self._name + "_"
+        else:
+            prefix = ""
+
+        # FIXME: needs batch computation to avoid OOM.
+        loss_before, loss_after, mean_kl, batch_count = 0., 0., 0., 0
+        for batch in iterate_minibatches_generic(input_lst=[xs, ys], batchsize=self._batchsize, shuffle=True):
+            batch_count += 1
+            xs, ys = batch
+            if self._use_trust_region:
+                old_means, old_log_stds = self._f_pdists(xs)
+                inputs = [xs, ys, old_means, old_log_stds]
+            else:
+                inputs = [xs, ys]
+            loss_before += self._optimizer.loss(inputs)
+
+            self._optimizer.optimize(inputs)
+            loss_after += self._optimizer.loss(inputs)
+            if self._use_trust_region:
+                mean_kl += self._optimizer.constraint_val(inputs)
+
+
+        '''
         if self._use_trust_region:
             old_means, old_log_stds = self._f_pdists(xs)
             inputs = [xs, ys, old_means, old_log_stds]
         else:
             inputs = [xs, ys]
         loss_before = self._optimizer.loss(inputs)
-        if self._name:
-            prefix = self._name + "_"
-        else:
-            prefix = ""
-        logger.record_tabular(prefix + 'LossBefore', loss_before)
+        
         self._optimizer.optimize(inputs)
         loss_after = self._optimizer.loss(inputs)
+        '''
+        logger.record_tabular(prefix + 'LossBefore', loss_before)
         logger.record_tabular(prefix + 'LossAfter', loss_after)
         if self._use_trust_region:
             logger.record_tabular(prefix + 'MeanKL', self._optimizer.constraint_val(inputs))
