@@ -34,7 +34,7 @@ parser.add_argument('--discount_factor', type=float, default=float(0.995))
 parser.add_argument('--batch_norm', help='Turn on batch normalization', type=bool, default=True)
 
 args = parser.parse_args()
-#logger.log(str(args))
+logger.log(str(args))
 
 def main(_):
 
