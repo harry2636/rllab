@@ -43,7 +43,7 @@ class GaussianMLPBaseline(Baseline, Parameterized):
     def predict(self, path):
         obs = path["observations"]
         batch_size = len(obs) // self.num_slices
-
+        '''
         prediction = []
         for batch in iterate_minibatches_generic(input_lst=[obs], batchsize=batch_size, shuffle=False):
             part_obs, = batch
@@ -51,9 +51,10 @@ class GaussianMLPBaseline(Baseline, Parameterized):
             prediction.append(part_pred)
 
         full_pred = np.concatenate(prediction, axis=0)
-
-        #real_result = self._regressor.predict(path["observations"]).flatten()
-        return full_pred
+        ''' 
+        real_result = self._regressor.predict(path["observations"]).flatten()
+        return real_result
+        #return full_pred
 
     @overrides
     def get_param_values(self, **tags):
