@@ -7,6 +7,7 @@ from sandbox.rocky.tf.core.network import ConvNetwork
 from sandbox.rocky.tf.envs.base import TfEnv
 from sandbox.rocky.tf.policies.categorical_mlp_policy import CategoricalMLPPolicy
 from sandbox.rocky.tf.baselines.gaussian_mlp_baseline import GaussianMLPBaseline
+from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptimizer
 
 from rllab.misc.instrument import run_experiment_lite
 from rllab.misc.parser import atari_arg_parser
@@ -26,6 +27,7 @@ parser.add_argument('--step_size', type=float, default=float(0.01))
 parser.add_argument('--discount_factor', type=float, default=float(0.995))
 parser.add_argument('--batch_norm', help='Turn on batch normalization', type=bool, default=True)
 parser.add_argument('--value_function', help='Choose value funciton baseline', choices=['zero', 'conv'], default='zero')
+parser.add_argument('--num_slices', help='Slice big batch into smaller ones to prevent OOM', type=int, default=int(2))
 
 args = parser.parse_args()
 logger.log(str(args))
@@ -56,7 +58,10 @@ def main(_):
       prob_network=policy_network
   )
 
-  value_network = ConvNetwork(
+  if (args.value_function == 'zero'):
+      baseline = ZeroBaseline(env.spec)
+  elif (args.value_function == 'conv'):
+      value_network = ConvNetwork(
           name='value_network',
           input_shape=env.observation_space.shape,
           output_dim=1,
@@ -71,15 +76,16 @@ def main(_):
           output_nonlinearity=None,
           batch_normalization=args.batch_norm
       )
-
-  if (args.value_function == 'zero'):
-      baseline = ZeroBaseline(env.spec)
-  elif (args.value_function == 'conv'):
+      conjugate_optimizer = ConjugateGradientOptimizer(
+          subsample_factor=0.1,
+          num_slices=args.num_slices
+      )
       baseline = GaussianMLPBaseline(
           env.spec,
           regressor_args=dict(
               step_size=0.01,
-              mean_network=value_network
+              mean_network=value_network,
+              optimizer=conjugate_optimizer
           )
       )
   else:
@@ -95,9 +101,11 @@ def main(_):
       n_itr=args.n_itr,
       discount=args.discount_factor,
       step_size=args.step_size,
-      optimizer_args={"subsample_factor":0.1}
+      optimizer_args={"subsample_factor":0.1,
+                      "num_slices":args.num_slices}
 #       plot=True
   )
+
 
   config = tf.ConfigProto(allow_soft_placement=True,
                           intra_op_parallelism_threads=args.n_cpu,
