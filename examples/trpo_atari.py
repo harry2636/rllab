@@ -107,9 +107,10 @@ def main(_):
   sess.__enter__()
   algo.train(sess)
 
+'''
 main("a")
-
-exit()
+exit(0)
+'''
 
 if __name__ == '__main__':
     run_experiment_lite(
