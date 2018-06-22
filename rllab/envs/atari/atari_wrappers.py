@@ -176,7 +176,12 @@ class ScaledFloatFrame(gym.ObservationWrapper):
     def observation(self, observation):
         # careful! This undoes the memory optimization, use
         # with smaller replay buffers only.
-        return np.array(observation).astype(np.float32) / 255.0
+
+        obs = np.array(observation).astype(np.float32)
+        obs = obs / 255.0
+        obs = obs - 0.5
+        obs = obs * 2.0
+        return obs
 
 class LazyFrames(object):
     def __init__(self, frames):
@@ -213,7 +218,7 @@ def make_atari(env_id):
     env = MaxAndSkipEnv(env, skip=4)
     return env
 
-def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=False, resize=84):
+def wrap_deepmind(env, episode_life=True, clip_rewards=True, frame_stack=True, scale=True, resize=84):
     """Configure environment for DeepMind-style Atari.
     """
     if episode_life:

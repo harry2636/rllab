@@ -9,6 +9,7 @@ from sandbox.rocky.tf.envs.base import TfEnv
 from sandbox.rocky.tf.policies.categorical_mlp_policy import CategoricalMLPPolicy
 from rllab.misc.instrument import run_experiment_lite
 from rllab.misc.parser import atari_arg_parser
+from rllab.misc import logger
 
 import tensorflow as tf
 '''
@@ -26,13 +27,19 @@ parser.add_argument('--n_itr', type=int, default=int(500))
 parser.add_argument('--log_dir', help='log directory', default=None)
 parser.add_argument('--n_cpu', type=int, default=int(1))
 parser.add_argument('--n_parallel', type=int, default=int(16))
-args = parser.parse_args()
+parser.add_argument('--resize_size', type=int, default=int(52))
+parser.add_argument('--batch_size', type=int, default=int(100000))
+parser.add_argument('--step_size', type=float, default=float(0.01))
+parser.add_argument('--discount_factor', type=float, default=float(0.995))
+parser.add_argument('--batch_norm', help='Turn on batch normalization', type=bool, default=True)
 
+args = parser.parse_args()
+#logger.log(str(args))
 
 def main(_):
 
   env = TfEnv(AtariEnv(
-      args.env, force_reset=True, record_video=False, record_log=False, resize_size=84))
+      args.env, force_reset=True, record_video=False, record_log=False, resize_size=args.resize_size))
 
   policy = CategoricalMLPPolicy(
       name='policy',
@@ -42,14 +49,15 @@ def main(_):
           input_shape=env.observation_space.shape,
           output_dim=env.action_space.n,
           # number of channels/filters for each conv layer
-          conv_filters=(32, 64, 64),
+          conv_filters=(16, 32),
           # filter size
-          conv_filter_sizes=(8, 4, 3),
-          conv_strides=(4, 2, 1),
-          conv_pads=('VALID', 'VALID', 'VALID'),
-          hidden_sizes=(512,),
+          conv_filter_sizes=(8, 4),
+          conv_strides=(4, 2),
+          conv_pads=('VALID', 'VALID'),
+          hidden_sizes=(256,),
           hidden_nonlinearity=tf.nn.relu,
           output_nonlinearity=tf.nn.softmax,
+          batch_normalization=args.batch_norm
       )
   )
 
@@ -59,11 +67,11 @@ def main(_):
       env=env,
       policy=policy,
       baseline=baseline,
-      batch_size=100000,
+      batch_size=args.batch_size,
       max_path_length=4500,
       n_itr=args.n_itr,
-      discount=0.99,
-      step_size=0.01,
+      discount=args.discount_factor,
+      step_size=args.step_size,
       optimizer_args={"subsample_factor":0.1}
 #       plot=True
   )
