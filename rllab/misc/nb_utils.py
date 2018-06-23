@@ -15,7 +15,11 @@ def plot_results(result_path, legend=False, post_processing=None, key='AverageRe
         name_or_patterns = [result_path]
     files = []
     for name_or_pattern in name_or_patterns:
-        matched_files = glob(name_or_pattern)
+        if name_or_pattern.startswith("/"):
+            target_path = name_or_pattern
+        else:
+            target_path = osp.abspath(osp.join(osp.dirname(__file__), '../..', name_or_pattern))
+        matched_files = glob(target_path+"/*")
         files += matched_files
     files = sorted(files)
     print('plotting the following experiments:')
