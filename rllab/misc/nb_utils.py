@@ -7,6 +7,42 @@ import joblib
 from glob import glob
 import os
 
+from rllab.misc.parser import arg_parser
+
+
+def plot_results(result_path, legend=False, post_processing=None, key='AverageReturn'):
+    if not isinstance(result_path, (list, tuple)):
+        name_or_patterns = [result_path]
+    files = []
+    for name_or_pattern in name_or_patterns:
+        matched_files = glob(name_or_pattern)
+        files += matched_files
+    files = sorted(files)
+    print('plotting the following experiments:')
+    for f in files:
+        print(f)
+    plots = []
+    legends = []
+    for f in files:
+        targetfile=""
+        if os.path.isdir(f):
+            targetfile = osp.join(f, 'progress.csv')
+        elif 'progress.csv' in f:
+            targetfile = f
+        exp_name = osp.basename(f)
+        returns = []
+        with open(targetfile, 'r') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row[key]:
+                    returns.append(float(row[key]))
+        returns = np.array(returns)
+        if post_processing:
+            returns = post_processing(returns)
+        plots.append(plt.plot(returns)[0])
+        legends.append(exp_name)
+    if legend:
+        plt.legend(plots, legends)
 
 def plot_experiments(name_or_patterns, legend=False, post_processing=None, key='AverageReturn'):
     if not isinstance(name_or_patterns, (list, tuple)):
@@ -25,7 +61,7 @@ def plot_experiments(name_or_patterns, legend=False, post_processing=None, key='
     for f in files:
         exp_name = osp.basename(f)
         returns = []
-        with open(osp.join(f, 'progress.csv'), 'r') as csvfile:
+        with open(osp.join(f, 'progress.csv'), 'rt') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 if row[key]:
@@ -179,3 +215,16 @@ class ExperimentDatabase(object):
 
     def unique(self, param_key):
         return uniq([exp.flat_params[param_key] for exp in self._experiments if param_key in exp.flat_params])
+
+if __name__ == '__main__':
+    parser = arg_parser()
+    parser.add_argument('--result_path', help='path to log', type=str, default='')
+    parser.add_argument('--key', help='key to log', type=str, default='AverageReturn')
+    args = parser.parse_args()
+    plot_results(result_path=args.result_path, key=args.key)
+    plt.show()
+
+'''
+plot_results("/Users/harrykim/Documents/rllab/data/local/experiment/experiment_2018_06_22_19_04_46_0001")
+plt.show()
+'''
