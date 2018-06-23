@@ -25,7 +25,7 @@ def plot_experiments(name_or_patterns, legend=False, post_processing=None, key='
     for f in files:
         exp_name = osp.basename(f)
         returns = []
-        with open(osp.join(f, 'progress.csv'), 'rb') as csvfile:
+        with open(osp.join(f, 'progress.csv'), 'r') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 if row[key]:
@@ -73,7 +73,7 @@ class ExperimentDatabase(object):
 
     def _read_data(self, progress_file):
         entries = dict()
-        with open(progress_file, 'rb') as csvfile:
+        with open(progress_file, 'rt') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 for k, v in row.items():
