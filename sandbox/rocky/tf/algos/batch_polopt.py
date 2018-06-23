@@ -6,6 +6,7 @@ import tensorflow as tf
 from sandbox.rocky.tf.samplers.batch_sampler import BatchSampler
 from sandbox.rocky.tf.samplers.vectorized_sampler import VectorizedSampler
 from rllab.sampler.utils import rollout
+import numpy as np
 
 
 class BatchPolopt(RLAlgorithm):
@@ -36,6 +37,7 @@ class BatchPolopt(RLAlgorithm):
             sampler_cls=None,
             sampler_args=None,
             force_batch_sampler=False,
+            clip_reward=False,
             **kwargs
     ):
         """
@@ -76,6 +78,7 @@ class BatchPolopt(RLAlgorithm):
         self.store_paths = store_paths
         self.whole_paths = whole_paths
         self.fixed_horizon = fixed_horizon
+        self.clip_reward = clip_reward
         if sampler_cls is None:
             if self.policy.vectorized and not force_batch_sampler:
                 sampler_cls = VectorizedSampler
@@ -113,6 +116,7 @@ class BatchPolopt(RLAlgorithm):
                 logger.log("Obtaining samples...")
                 paths = self.obtain_samples(itr)
                 logger.log("Processing samples...")
+                self.process_paths(paths)
                 samples_data = self.process_samples(itr, paths)
                 logger.log("Logging diagnostics...")
                 self.log_diagnostics(paths)
@@ -157,4 +161,10 @@ class BatchPolopt(RLAlgorithm):
 
     def optimize_policy(self, itr, samples_data):
         raise NotImplementedError
+
+    def process_paths(self, paths):
+        for path in paths:
+            path["raw_rewards"] = np.copy(path["rewards"])
+            if (self.clip_reward):
+                path["rewards"] = np.clip(path["raw_rewards"], -1, 1)
 

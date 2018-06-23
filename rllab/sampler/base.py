@@ -90,6 +90,8 @@ class BaseSampler(Sampler):
 
             undiscounted_returns = [sum(path["rewards"]) for path in paths]
 
+            raw_returns = [sum(path["raw_rewards"]) for path in paths]
+
             ent = np.mean(self.algo.policy.distribution.entropy(agent_infos))
 
             samples_data = dict(
@@ -146,6 +148,8 @@ class BaseSampler(Sampler):
 
             undiscounted_returns = [sum(path["rewards"]) for path in paths]
 
+            raw_returns = [sum(path["raw_rewards"]) for path in paths]
+
             ent = np.sum(self.algo.policy.distribution.entropy(agent_infos) * valids) / np.sum(valids)
 
             samples_data = dict(
@@ -171,6 +175,7 @@ class BaseSampler(Sampler):
         logger.record_tabular('AverageDiscountedReturn',
                               average_discounted_return)
         logger.record_tabular('AverageReturn', np.mean(undiscounted_returns))
+        logger.record_tabular('AverageRawReturn', np.mean(raw_returns))
         logger.record_tabular('ExplainedVariance', ev)
         logger.record_tabular('NumTrajs', len(paths))
         logger.record_tabular('Entropy', ent)
