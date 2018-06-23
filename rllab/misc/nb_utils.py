@@ -33,9 +33,11 @@ def plot_results(result_path, legend=False, post_processing=None, key='AverageRe
             targetfile = osp.join(f, 'progress.csv')
         elif 'progress.csv' in f:
             targetfile = f
+        else:
+            continue
         exp_name = osp.basename(f)
         returns = []
-        with open(targetfile, 'r') as csvfile:
+        with open(targetfile, 'rt') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 if row[key]:
