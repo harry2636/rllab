@@ -1,8 +1,6 @@
-
-
-
 from rllab.misc import ext
 from rllab.misc import logger
+from rllab.misc.ext import sliced_fun
 from rllab.core.serializable import Serializable
 from sandbox.rocky.tf.misc import tensor_utils
 # from rllab.algo.first_order_method import parse_update_method
@@ -12,6 +10,7 @@ import tensorflow as tf
 import time
 from functools import partial
 import pyprind
+
 
 
 class FirstOrderOptimizer(Serializable):
@@ -29,6 +28,7 @@ class FirstOrderOptimizer(Serializable):
             batch_size=32,
             callback=None,
             verbose=False,
+            num_slices=1,
             **kwargs):
         """
 
@@ -55,6 +55,7 @@ class FirstOrderOptimizer(Serializable):
         self._verbose = verbose
         self._input_vars = None
         self._train_op = None
+        self._num_slices = num_slices
 
     def update_opt(self, loss, target, inputs, extra_inputs=None, **kwargs):
         """
@@ -82,7 +83,9 @@ class FirstOrderOptimizer(Serializable):
     def loss(self, inputs, extra_inputs=None):
         if extra_inputs is None:
             extra_inputs = tuple()
-        return self._opt_fun["f_loss"](*(tuple(inputs) + extra_inputs))
+
+        return sliced_fun(self._opt_fun["f_loss"], self._num_slices)(inputs, extra_inputs)
+        #return self._opt_fun["f_loss"](*(tuple(inputs) + extra_inputs))
 
     def optimize(self, inputs, extra_inputs=None, callback=None):
 
@@ -95,7 +98,8 @@ class FirstOrderOptimizer(Serializable):
         if extra_inputs is None:
             extra_inputs = tuple()
 
-        last_loss = f_loss(*(tuple(inputs) + extra_inputs))
+        last_loss = sliced_fun(f_loss, self._num_slices)(inputs, extra_inputs)
+        #last_loss = f_loss(*(tuple(inputs) + extra_inputs))
 
         start_time = time.time()
 
@@ -117,7 +121,8 @@ class FirstOrderOptimizer(Serializable):
                 if progbar.active:
                     progbar.stop()
 
-            new_loss = f_loss(*(tuple(inputs) + extra_inputs))
+            new_loss = sliced_fun(f_loss, self._num_slices)(inputs, extra_inputs)
+            #new_loss = f_loss(*(tuple(inputs) + extra_inputs))
 
             if self._verbose:
                 logger.log("Epoch: %d | Loss: %f" % (epoch, new_loss))
