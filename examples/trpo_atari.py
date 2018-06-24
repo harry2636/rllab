@@ -25,10 +25,9 @@ parser.add_argument('--resize_size', type=int, default=int(52))
 parser.add_argument('--batch_size', type=int, default=int(100000))
 parser.add_argument('--step_size', type=float, default=float(0.01))
 parser.add_argument('--discount_factor', type=float, default=float(0.995))
-parser.add_argument('--batch_norm', help='Turn on batch normalization', type=bool, default=False) #Batch norm currently have bug in implementation.
 parser.add_argument('--value_function', help='Choose value funciton baseline', choices=['zero', 'conv'], default='zero')
 parser.add_argument('--num_slices', help='Slice big batch into smaller ones to prevent OOM', type=int, default=int(1))
-parser.add_argument('--clip_reward', help='Clip reward into [-1, 1]', type=bool, default=True)
+parser.add_argument('--reward_no_scale', help='Turn off reward scaling', action='store_true')
 
 args = parser.parse_args()
 logger.log(str(args))
@@ -105,7 +104,7 @@ def main(_):
       n_itr=args.n_itr,
       discount=args.discount_factor,
       step_size=args.step_size,
-      clip_reward=args.clip_reward,
+      clip_reward=(not args.reward_no_scale),
       optimizer_args={"subsample_factor":0.1,
                       "num_slices":args.num_slices}
 #       plot=True
