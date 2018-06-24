@@ -41,9 +41,10 @@ class GaussianMLPBaseline(Baseline, Parameterized):
 
     @overrides
     def predict(self, path):
+
+        '''
         obs = path["observations"]
         batch_size = len(obs) // self.num_slices
-        '''
         prediction = []
         for batch in iterate_minibatches_generic(input_lst=[obs], batchsize=batch_size, shuffle=False):
             part_obs, = batch

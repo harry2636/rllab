@@ -1,13 +1,13 @@
 from rllab.baselines.zero_baseline import ZeroBaseline
 from rllab.envs.atari.atari_env import AtariEnv
 
-from rllab.envs.normalized_env import normalize
 from sandbox.rocky.tf.algos.trpo import TRPO
 from sandbox.rocky.tf.core.network import ConvNetwork
 from sandbox.rocky.tf.envs.base import TfEnv
 from sandbox.rocky.tf.policies.categorical_mlp_policy import CategoricalMLPPolicy
 from sandbox.rocky.tf.baselines.gaussian_mlp_baseline import GaussianMLPBaseline
 from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptimizer
+from sandbox.rocky.tf.optimizers.first_order_optimizer import FirstOrderOptimizer
 
 from rllab.misc.instrument import run_experiment_lite
 from rllab.misc.parser import atari_arg_parser
@@ -25,12 +25,30 @@ parser.add_argument('--resize_size', type=int, default=int(52))
 parser.add_argument('--batch_size', type=int, default=int(100000))
 parser.add_argument('--step_size', type=float, default=float(0.01))
 parser.add_argument('--discount_factor', type=float, default=float(0.995))
-parser.add_argument('--value_function', help='Choose value funciton baseline', choices=['zero', 'conv'], default='zero')
+parser.add_argument('--value_function', help='Choose value funciton baseline', choices=['zero', 'conj', 'adam'], default='zero')
 parser.add_argument('--num_slices', help='Slice big batch into smaller ones to prevent OOM', type=int, default=int(1))
 parser.add_argument('--reward_no_scale', help='Turn off reward scaling', action='store_true')
 
 args = parser.parse_args()
 logger.log(str(args))
+
+def get_value_network(env):
+    value_network = ConvNetwork(
+        name='value_network',
+        input_shape=env.observation_space.shape,
+        output_dim=1,
+        # number of channels/filters for each conv layer
+        conv_filters=(16, 32),
+        # filter size
+        conv_filter_sizes=(8, 4),
+        conv_strides=(4, 2),
+        conv_pads=('VALID', 'VALID'),
+        hidden_sizes=(256,),
+        hidden_nonlinearity=tf.nn.relu,
+        output_nonlinearity=None,
+        batch_normalization=False
+    )
+    return value_network
 
 def main(_):
 
@@ -60,40 +78,36 @@ def main(_):
 
   if (args.value_function == 'zero'):
       baseline = ZeroBaseline(env.spec)
-  elif (args.value_function == 'conv'):
-      value_network = ConvNetwork(
-          name='value_network',
-          input_shape=env.observation_space.shape,
-          output_dim=1,
-          # number of channels/filters for each conv layer
-          conv_filters=(16, 32),
-          # filter size
-          conv_filter_sizes=(8, 4),
-          conv_strides=(4, 2),
-          conv_pads=('VALID', 'VALID'),
-          hidden_sizes=(256,),
-          hidden_nonlinearity=tf.nn.relu,
-          output_nonlinearity=None,
-          batch_normalization=False
-      )
-      conjugate_optimizer = ConjugateGradientOptimizer(
-          subsample_factor=1.0,
-          num_slices=args.num_slices
-      )
+  else:
+      value_network = get_value_network(env)
+
+      if (args.value_function == 'conj'):
+          baseline_optimizer = ConjugateGradientOptimizer(
+              subsample_factor=1.0,
+              num_slices=args.num_slices
+          )
+          baseline_batch_size = args.batch_size
+      elif (args.value_function == 'adam'):
+          baseline_optimizer = FirstOrderOptimizer()
+          baseline_batch_size = 512
+      else:
+          logger.log("Inappropirate value function")
+          exit(0)
+
+
       baseline = GaussianMLPBaseline(
           env.spec,
           num_slices=args.num_slices,
           regressor_args=dict(
               step_size=0.01,
               mean_network=value_network,
-              optimizer=conjugate_optimizer,
-              subsample_factor=0.1,
-              batchsize=args.batch_size
+              optimizer=baseline_optimizer,
+              subsample_factor=1.0,
+              batchsize=baseline_batch_size,
+              use_trust_region=False
           )
       )
-  else:
-      logger.log("Inappropriate value function")
-      exit(0)
+
 
   algo = TRPO(
       env=env,
@@ -105,7 +119,7 @@ def main(_):
       discount=args.discount_factor,
       step_size=args.step_size,
       clip_reward=(not args.reward_no_scale),
-      optimizer_args={"subsample_factor":0.1,
+      optimizer_args={"subsample_factor":1.0,
                       "num_slices":args.num_slices}
 #       plot=True
   )
