@@ -88,7 +88,11 @@ def main(_):
               num_slices=args.num_slices
           )
       elif (args.value_function == 'adam'):
-          baseline_optimizer = FirstOrderOptimizer(max_epochs=3, batch_size=512)
+          baseline_optimizer = FirstOrderOptimizer(
+              max_epochs=3,
+              batch_size=512,
+              num_slices=args.num_slices
+          )
       else:
           logger.log("Inappropirate value function")
           exit(0)
