@@ -80,16 +80,15 @@ def main(_):
       baseline = ZeroBaseline(env.spec)
   else:
       value_network = get_value_network(env)
+      baseline_batch_size = args.batch_size * 10
 
       if (args.value_function == 'conj'):
           baseline_optimizer = ConjugateGradientOptimizer(
               subsample_factor=1.0,
               num_slices=args.num_slices
           )
-          baseline_batch_size = args.batch_size
       elif (args.value_function == 'adam'):
-          baseline_optimizer = FirstOrderOptimizer()
-          baseline_batch_size = 512
+          baseline_optimizer = FirstOrderOptimizer(max_epochs=3, batch_size=512)
       else:
           logger.log("Inappropirate value function")
           exit(0)
