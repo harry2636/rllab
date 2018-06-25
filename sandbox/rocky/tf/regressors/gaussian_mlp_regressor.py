@@ -105,7 +105,7 @@ class GaussianMLPRegressor(LayersPowered, Serializable):
 
             xs_var = mean_network.input_layer.input_var
             ys_var = tf.placeholder(dtype=tf.float32, name="ys", shape=(None, output_dim))
-            old_means_var = tf.placeholder(dtype=tf.float32, name="ys", shape=(None, output_dim))
+            old_means_var = tf.placeholder(dtype=tf.float32, name="old_means", shape=(None, output_dim))
             old_log_stds_var = tf.placeholder(dtype=tf.float32, name="old_log_stds", shape=(None, output_dim))
 
             x_mean_var = tf.Variable(

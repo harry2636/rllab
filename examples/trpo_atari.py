@@ -28,6 +28,7 @@ parser.add_argument('--discount_factor', type=float, default=float(0.995))
 parser.add_argument('--value_function', help='Choose value funciton baseline', choices=['zero', 'conj', 'adam'], default='zero')
 parser.add_argument('--num_slices', help='Slice big batch into smaller ones to prevent OOM', type=int, default=int(1))
 parser.add_argument('--reward_no_scale', help='Turn off reward scaling', action='store_true')
+parser.add_argument('--debug', help='debug mode', action='store_true')
 
 args = parser.parse_args()
 logger.log(str(args))
@@ -136,21 +137,20 @@ def main(_):
   sess.__enter__()
   algo.train(sess)
 
-'''
-main("a")
-exit(0)
-'''
 
 if __name__ == '__main__':
-    run_experiment_lite(
-        main,
-        # Number of parallel workers for sampling
-        n_parallel=args.n_parallel,
-        # Only keep the snapshot parameters for the last iteration
-        snapshot_mode="last",
-        # Specifies the seed for the experiment. If this is not provided, a random seed
-        # will be used
-        seed=args.seed,
-        log_dir=args.log_dir,
-        # plot=True,
-    )
+    if (args.debug):
+        main(None)
+    else:
+        run_experiment_lite(
+            main,
+            # Number of parallel workers for sampling
+            n_parallel=args.n_parallel,
+            # Only keep the snapshot parameters for the last iteration
+            snapshot_mode="last",
+            # Specifies the seed for the experiment. If this is not provided, a random seed
+            # will be used
+            seed=args.seed,
+            log_dir=args.log_dir,
+            # plot=True,
+        )
