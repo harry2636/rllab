@@ -79,7 +79,10 @@ class DeterministicMLPRegressor(LayersPowered, Serializable):
 
             normalized_xs_var = (xs_var - x_mean_var) / x_std_var
 
-            fit_ys_var = L.get_output(l_out, {network.input_layer: normalized_xs_var})
+            if (normalize_inputs):
+                fit_ys_var = L.get_output(l_out, {network.input_layer: normalized_xs_var})
+            else:
+                fit_ys_var = L.get_output(l_out, {network.input_layer: xs_var})
 
             loss = tf.reduce_mean(tf.square(fit_ys_var - ys_var))
 
@@ -114,7 +117,7 @@ class DeterministicMLPRegressor(LayersPowered, Serializable):
                 tf.assign(self._x_mean_var, new_mean),
                 tf.assign(self._x_std_var, new_std),
             ))
-            inputs = [xs, ys]
+        inputs = [xs, ys]
         loss_before = self._optimizer.loss(inputs)
         if self._name:
             prefix = self._name + "_"

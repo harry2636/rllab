@@ -119,7 +119,8 @@ def main(_):
           num_slices=args.num_slices,
           regressor_args=dict(
               network=value_network,
-              optimizer=baseline_optimizer
+              optimizer=baseline_optimizer,
+              normalize_inputs=False
           )
       )
 
