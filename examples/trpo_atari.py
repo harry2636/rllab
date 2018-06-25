@@ -30,6 +30,9 @@ parser.add_argument('--value_function', help='Choose value funciton baseline', c
 parser.add_argument('--num_slices', help='Slice big batch into smaller ones to prevent OOM', type=int, default=int(1))
 parser.add_argument('--reward_no_scale', help='Turn off reward scaling', action='store_true')
 parser.add_argument('--debug', help='debug mode', action='store_true')
+parser.add_argument('--atari_noop', action='store_true')
+parser.add_argument('--atari_eplife', action='store_true')
+parser.add_argument('--atari_firereset', action='store_true')
 
 args = parser.parse_args()
 logger.log(str(args))
@@ -55,7 +58,9 @@ def get_value_network(env):
 def main(_):
 
   env = TfEnv(AtariEnv(
-      args.env, force_reset=True, record_video=False, record_log=False, resize_size=args.resize_size))
+      args.env, force_reset=True, record_video=False, record_log=False, resize_size=args.resize_size,
+      atari_noop=args.atari_noop, atari_eplife=args.atari_eplife, atari_firereset=args.atari_firereset
+  ))
 
   policy_network = ConvNetwork(
           name='prob_network',

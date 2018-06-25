@@ -19,7 +19,7 @@ from rllab.envs.atari.atari_wrappers import wrap_deepmind, make_atari
 
 
 class AtariEnv(Env, Serializable):
-    def __init__(self, env_name, resize_size=52, scaling_method='minmax', record_video=True, video_schedule=None, log_dir=None, record_log=True,
+    def __init__(self, env_name, resize_size=52, atari_noop=True, atari_eplife=False, atari_firereset=False, record_video=True, video_schedule=None, log_dir=None, record_log=True,
                  force_reset=False):
         if log_dir is None:
             if logger.get_snapshot_dir() is None:
@@ -28,9 +28,9 @@ class AtariEnv(Env, Serializable):
                 log_dir = os.path.join(logger.get_snapshot_dir(), "gym_log")
         Serializable.quick_init(self, locals())
 
-        env = make_atari(env_name)
+        env = make_atari(env_name, noop=atari_noop)
 
-        env = wrap_deepmind(env=env, resize=resize_size)
+        env = wrap_deepmind(env=env, resize=resize_size, episode_life=atari_eplife, fire_reset=atari_firereset)
         logger.log("resize size: %d" % resize_size)
 
         self.env = env
