@@ -6,6 +6,7 @@ from sandbox.rocky.tf.core.network import ConvNetwork
 from sandbox.rocky.tf.envs.base import TfEnv
 from sandbox.rocky.tf.policies.categorical_mlp_policy import CategoricalMLPPolicy
 from sandbox.rocky.tf.baselines.gaussian_mlp_baseline import GaussianMLPBaseline
+from sandbox.rocky.tf.baselines.deterministic_mlp_baseline import DeterministicMLPBaseline
 from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptimizer
 from sandbox.rocky.tf.optimizers.first_order_optimizer import FirstOrderOptimizer
 
@@ -92,13 +93,14 @@ def main(_):
           baseline_optimizer = FirstOrderOptimizer(
               max_epochs=3,
               batch_size=512,
-              num_slices=args.num_slices
+              num_slices=args.num_slices,
+              verbose=True
           )
       else:
           logger.log("Inappropirate value function")
           exit(0)
 
-
+      '''
       baseline = GaussianMLPBaseline(
           env.spec,
           num_slices=args.num_slices,
@@ -111,7 +113,15 @@ def main(_):
               use_trust_region=False
           )
       )
-
+      '''
+      baseline = DeterministicMLPBaseline(
+          env.spec,
+          num_slices=args.num_slices,
+          regressor_args=dict(
+              network=value_network,
+              optimizer=baseline_optimizer
+          )
+      )
 
   algo = TRPO(
       env=env,

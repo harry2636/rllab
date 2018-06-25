@@ -1,9 +1,3 @@
-
-
-
-
-
-
 import numpy as np
 
 import tensorflow as tf
@@ -36,7 +30,7 @@ class DeterministicMLPRegressor(LayersPowered, Serializable):
             hidden_nonlinearity=tf.nn.tanh,
             output_nonlinearity=None,
             optimizer=None,
-            normalize_inputs=True,
+            normalize_inputs=True
     ):
         """
         :param input_shape: Shape of the input data.
@@ -53,7 +47,7 @@ class DeterministicMLPRegressor(LayersPowered, Serializable):
                 optimizer = LbfgsOptimizer(name="optimizer")
 
             self.output_dim = output_dim
-            self.optimizer = optimizer
+            self._optimizer = optimizer
 
             if network is None:
                 network = MLP(
@@ -87,7 +81,7 @@ class DeterministicMLPRegressor(LayersPowered, Serializable):
 
             fit_ys_var = L.get_output(l_out, {network.input_layer: normalized_xs_var})
 
-            loss = - tf.reduce_mean(tf.square(fit_ys_var - ys_var))
+            loss = tf.reduce_mean(tf.square(fit_ys_var - ys_var))
 
             self.f_predict = tensor_utils.compile_function([xs_var], fit_ys_var)
 
@@ -99,38 +93,38 @@ class DeterministicMLPRegressor(LayersPowered, Serializable):
 
             optimizer_args["inputs"] = [xs_var, ys_var]
 
-            self.optimizer.update_opt(**optimizer_args)
+            self._optimizer.update_opt(**optimizer_args)
 
-            self.name = name
+            self._name = name
             self.l_out = l_out
 
-            self.normalize_inputs = normalize_inputs
-            self.x_mean_var = x_mean_var
-            self.x_std_var = x_std_var
+            self._normalize_inputs = normalize_inputs
+            self._x_mean_var = x_mean_var
+            self._x_std_var = x_std_var
 
     def predict_sym(self, xs):
         return L.get_output(self.l_out, xs)
 
-    # def fit(self, xs, ys):
-    #     if self._normalize_inputs:
-    #         # recompute normalizing constants for inputs
-    #         new_mean = np.mean(xs, axis=0, keepdims=True)
-    #         new_std = np.std(xs, axis=0, keepdims=True) + 1e-8
-    #         tf.get_default_session().run(tf.group(
-    #             tf.assign(self._x_mean_var, new_mean),
-    #             tf.assign(self._x_std_var, new_std),
-    #         ))
-    #         inputs = [xs, ys]
-    #     loss_before = self._optimizer.loss(inputs)
-    #     if self._name:
-    #         prefix = self._name + "_"
-    #     else:
-    #         prefix = ""
-    #     logger.record_tabular(prefix + 'LossBefore', loss_before)
-    #     self._optimizer.optimize(inputs)
-    #     loss_after = self._optimizer.loss(inputs)
-    #     logger.record_tabular(prefix + 'LossAfter', loss_after)
-    #     logger.record_tabular(prefix + 'dLoss', loss_before - loss_after)
+    def fit(self, xs, ys):
+        if self._normalize_inputs:
+            # recompute normalizing constants for inputs
+            new_mean = np.mean(xs, axis=0, keepdims=True)
+            new_std = np.std(xs, axis=0, keepdims=True) + 1e-8
+            tf.get_default_session().run(tf.group(
+                tf.assign(self._x_mean_var, new_mean),
+                tf.assign(self._x_std_var, new_std),
+            ))
+            inputs = [xs, ys]
+        loss_before = self._optimizer.loss(inputs)
+        if self._name:
+            prefix = self._name + "_"
+        else:
+            prefix = ""
+        logger.record_tabular(prefix + 'LossBefore', loss_before)
+        self._optimizer.optimize(inputs)
+        loss_after = self._optimizer.loss(inputs)
+        logger.record_tabular(prefix + 'LossAfter', loss_after)
+        logger.record_tabular(prefix + 'dLoss', loss_before - loss_after)
 
     def predict(self, xs):
         return self.f_predict(np.asarray(xs))

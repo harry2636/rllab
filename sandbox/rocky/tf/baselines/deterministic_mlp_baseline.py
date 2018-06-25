@@ -4,11 +4,11 @@ from rllab.core.serializable import Serializable
 from rllab.core.parameterized import Parameterized
 from rllab.baselines.base import Baseline
 from rllab.misc.overrides import overrides
-from sandbox.rocky.tf.regressors.gaussian_mlp_regressor import GaussianMLPRegressor
+from sandbox.rocky.tf.regressors.deterministic_mlp_regressor import DeterministicMLPRegressor
 
 
 
-class GaussianMLPBaseline(Baseline, Parameterized):
+class DeterministicMLPBaseline(Baseline, Parameterized):
 
     def __init__(
             self,
@@ -20,11 +20,11 @@ class GaussianMLPBaseline(Baseline, Parameterized):
             regressor_args=None,
     ):
         Serializable.quick_init(self, locals())
-        super(GaussianMLPBaseline, self).__init__(env_spec)
+        super(DeterministicMLPBaseline, self).__init__(env_spec)
         if regressor_args is None:
             regressor_args = dict()
 
-        self._regressor = GaussianMLPRegressor(
+        self._regressor = DeterministicMLPRegressor(
             input_shape= (env_spec.observation_space.flat_dim * num_seq_inputs,),
             output_dim=1,
             name="vf",
