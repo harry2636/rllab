@@ -10,7 +10,7 @@ import os
 from rllab.misc.parser import arg_parser
 
 
-def plot_results(result_path, legend=False, post_processing=None, key='AverageReturn'):
+def plot_results(result_path, legend=False, post_processing=None, key='AverageReturn', title=''):
     if not isinstance(result_path, (list, tuple)):
         name_or_patterns = [result_path]
     files = []
@@ -50,6 +50,85 @@ def plot_results(result_path, legend=False, post_processing=None, key='AverageRe
     if legend:
         plt.legend(plots, legends)
 
+    plt.title(title)
+
+def plot_average_results(result_path, label=[], post_processing=None, key='AverageReturn', title=''):
+    if not isinstance(result_path, (list, tuple)):
+        name_or_patterns = [result_path]
+    files = []
+    for name_or_pattern in name_or_patterns:
+        if name_or_pattern.startswith("/"):
+            target_path = name_or_pattern
+        else:
+            target_path = osp.abspath(osp.join(osp.dirname(__file__), '../..', name_or_pattern))
+        matched_files = glob(target_path+"/*")
+        files += matched_files
+    files = sorted(files)
+    print('plotting the following experiments:')
+    for f in files:
+        print(f)
+    plots = []
+    labels = []
+
+    return_array = []
+    for f in files:
+        targetfile=""
+        if os.path.isdir(f):
+            targetfile = osp.join(f, 'progress.csv')
+        elif 'progress.csv' in f:
+            targetfile = f
+        else:
+            continue
+        exp_name = osp.basename(f)
+        returns = []
+        with open(targetfile, 'rt') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row[key]:
+                    returns.append(float(row[key]))
+        returns = np.array(returns)
+        if post_processing:
+            returns = post_processing(returns)
+
+        return_array.append(returns)
+
+        #plots.append(plt.plot(returns)[0])
+        #legends.append(exp_name)
+
+    min_itr = min([x.shape[0] for x in return_array])
+    x_vals = np.arange(0, min_itr)
+
+    average_returns = []
+    std_deviations = []
+    for i in range(min_itr):
+        current_data = [x[i] for x in return_array]
+        avg_return = np.average(current_data)
+        std_dev = np.std(current_data)
+        average_returns.append(avg_return)
+        std_deviations.append(std_dev)
+    average_returns = np.array(average_returns)
+    std_deviations = np.array(std_deviations)
+
+
+    line = plt.plot(x_vals, average_returns)[0]
+    plots.append(line)
+    #TODO: add plot label
+
+
+    plt.fill_between(x_vals,
+                     average_returns - std_deviations,
+                     average_returns + std_deviations,
+                     facecolor=line.get_color(),
+                     alpha=0.25)
+
+    if len(labels) > 0:
+        plt.legend()
+
+    plt.title(title)
+    #plt.xlim(0, min_itr)
+    plt.tight_layout()
+
+'''
 def plot_experiments(name_or_patterns, legend=False, post_processing=None, key='AverageReturn'):
     if not isinstance(name_or_patterns, (list, tuple)):
         name_or_patterns = [name_or_patterns]
@@ -79,7 +158,7 @@ def plot_experiments(name_or_patterns, legend=False, post_processing=None, key='
         legends.append(exp_name)
     if legend:
         plt.legend(plots, legends)
-
+'''
 
 class Experiment(object):
     def __init__(self, progress, params, pkl_data=None):
@@ -222,15 +301,27 @@ class ExperimentDatabase(object):
     def unique(self, param_key):
         return uniq([exp.flat_params[param_key] for exp in self._experiments if param_key in exp.flat_params])
 
+
+'''
+#plot_average_results("/Users/harrykim/Documents/rllab/data/local/experiment/experiment_2018_06_22_19_04_46_0001")
+plot_average_results("/Users/harrykim/Desktop/experiment/embedding_results/v2_rllab_Frostbite_hashhp_sqadamvalue", key='AverageRawReturn')
+plt.show()
+exit(0)
+'''
+
 if __name__ == '__main__':
     parser = arg_parser()
     parser.add_argument('--result_path', help='path to log', type=str, default='')
     parser.add_argument('--key', help='key to log', type=str, default='AverageReturn')
+    parser.add_argument('--plot_type', help='Choose value funciton baseline', choices=['separate', 'average'],
+                        default='separate')
+    parser.add_argument('-t', '--title', help='Title of plot', default='Pong')
     args = parser.parse_args()
-    plot_results(result_path=args.result_path, key=args.key)
+
+    if (args.plot_type == 'separate'):
+        plot_results(result_path=args.result_path, key=args.key, title=args.title)
+    else:
+        plot_average_results(result_path=args.result_path, key=args.key, title=args.title)
+
     plt.show()
 
-'''
-plot_results("/Users/harrykim/Documents/rllab/data/local/experiment/experiment_2018_06_22_19_04_46_0001")
-plt.show()
-'''
