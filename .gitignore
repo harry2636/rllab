@@ -40,4 +40,5 @@ rllab/config_personal.py
 *result*
 *.sh
 set_env.py
+figures
 
